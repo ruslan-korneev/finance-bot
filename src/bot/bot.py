@@ -3,7 +3,6 @@ import asyncio
 import logging
 import os
 
-
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.types import (
@@ -14,6 +13,8 @@ from aiogram.types import (
 # from aiogram.dispatcher.filters import Text
 # from aiogram.dispatcher.filters.state import State, StatesGroup
 
+from db.database import Session
+from db.models.names import Name
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +30,18 @@ TG_TOKEN = os.environ.get('TG_TOKEN')
 bot = Bot(token=TG_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+
+# My functions
+
+async def start_adding_income(message: types.Message):
+    session = Session()
+    reply = ''
+    for name in session.query(Name).all():
+        reply += f'{name.id}: {name.name}\n'
+    await message.reply(reply)
+
+
+#Message Handlers
 
 # Start with hello message
 @dp.message_handler(commands=['start'])
@@ -46,6 +59,22 @@ async def send_welcome(message: types.Message):
     keyboard.row(
         add_assets_button, add_liabilities_button)
     await message.reply(reply, reply_markup=keyboard)
+
+
+@dp.message_handler()
+async def message_parser(message: types.Message):
+    if message.text == 'Бюджет':
+        await message.reply('Бюджет')
+    elif message.text == 'Добавить Доходы':
+        await start_adding_income(message)
+#    elif message.text == 'Добавить Расходы':
+#        await start_adding_expenses(message)
+#    elif message.text == 'Добавить Активы':
+#        await start_adding_assets(message):
+#    elif message.text == 'Добавить Пассивы':
+#        await start_adding_liabilities(message)
+    else:
+        await message.reply('Не понял')
 
 
 if __name__ == '__main__':
