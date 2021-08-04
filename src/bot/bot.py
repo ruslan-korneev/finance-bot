@@ -14,7 +14,13 @@ from aiogram.types import (
 # from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from db.database import Session
-from db.models.names import Name
+from db.models.names import (
+    NameExpense,
+    NameIncome,
+)
+
+from pagination.kb import InlineKeyboardPaginator
+
 
 # Configure logging
 logging.basicConfig(
@@ -30,15 +36,109 @@ TG_TOKEN = os.environ.get('TG_TOKEN')
 bot = Bot(token=TG_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
+# Scrolling pages
+@dp.callback_query_handler(
+    lambda c: 'name_income' in c.data.split('#')[0])
+async def name_income_pages(call):
+    page = int(call.data.split('#')[1])
+    await bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id)
+    await start_adding_income(
+        call.message,
+        page)
+
+
+@dp.callback_query_handler(
+    lambda c: 'name_expense' in c.data.split('#')[0])
+async def name_income_pages(call):
+    page = int(call.data.split('#')[1])
+    await bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id)
+    await start_adding_expense(
+        call.message,
+        page)
+
 
 # My functions
 
-async def start_adding_income(message: types.Message):
+async def start_adding_income(message: types.Message, page=1):
     session = Session()
-    reply = ''
-    for name in session.query(Name).all():
-        reply += f'{name.id}: {name.name}\n'
-    await message.reply(reply)
+    names = [(name.id, name.name) for name in session.query(NameIncome).all()]
+
+    if len(names) % 10 == 0:
+        pages = len(names)//10
+    else:
+        pages = len(names)//10 + 1
+
+    paginator = InlineKeyboardPaginator(
+        pages,
+        current_page=page,
+        data_pattern='name_income#{page}',
+    )
+
+    start_for = page * 10 - 10
+    stop_for = page * 10
+    if len(names) < stop_for:
+        stop_for = len(names)
+    for i in range(start_for, stop_for, 2):
+        if stop_for != (i + 1):
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]),
+                InlineKeyboardButton(
+                    names[i+1][1],
+                    callback_data=names[i+1][0]))
+        else:
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]))
+
+    await message.answer(
+        text=f'Откуда доход?',
+        reply_markup=paginator.markup)
+
+
+async def start_adding_expense(message: types.Message, page=1):
+    session = Session()
+    names = [(name.id, name.name) for name in session.query(NameExpense).all()]
+
+    if len(names) % 10 == 0:
+        pages = len(names)//10
+    else:
+        pages = len(names)//10 + 1
+
+    paginator = InlineKeyboardPaginator(
+        pages,
+        current_page=page,
+        data_pattern='name_expense#{page}',
+    )
+
+    start_for = page * 10 - 10
+    stop_for = page * 10
+    if len(names) < stop_for:
+        stop_for = len(names)
+    for i in range(start_for, stop_for, 2):
+        if stop_for != (i + 1):
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]),
+                InlineKeyboardButton(
+                    names[i+1][1],
+                    callback_data=names[i+1][0]))
+        else:
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]))
+
+    await message.answer(
+        text=f'На что потрачено?',
+        reply_markup=paginator.markup)
 
 
 #Message Handlers
@@ -66,11 +166,11 @@ async def message_parser(message: types.Message):
     if message.text == 'Бюджет':
         await message.reply('Бюджет')
     elif message.text == 'Добавить Доходы':
-        await start_adding_income(message)
-#    elif message.text == 'Добавить Расходы':
-#        await start_adding_expenses(message)
+        await start_adding_income(message, 1)
+    elif message.text == 'Добавить Расходы':
+        await start_adding_expense(message)
 #    elif message.text == 'Добавить Активы':
-#        await start_adding_assets(message):
+#        await start_adding_asset(message):
 #    elif message.text == 'Добавить Пассивы':
 #        await start_adding_liabilities(message)
     else:
