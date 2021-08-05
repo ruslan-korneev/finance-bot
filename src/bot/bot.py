@@ -17,6 +17,8 @@ from db.database import Session
 from db.models.names import (
     NameExpense,
     NameIncome,
+    NameAsset,
+    NameLiability,
 )
 
 from pagination.kb import InlineKeyboardPaginator
@@ -51,12 +53,36 @@ async def name_income_pages(call):
 
 @dp.callback_query_handler(
     lambda c: 'name_expense' in c.data.split('#')[0])
-async def name_income_pages(call):
+async def name_expense_pages(call):
     page = int(call.data.split('#')[1])
     await bot.delete_message(
         call.message.chat.id,
         call.message.message_id)
     await start_adding_expense(
+        call.message,
+        page)
+
+
+@dp.callback_query_handler(
+    lambda c: 'name_asset' in c.data.split('#')[0])
+async def name_asset_pages(call):
+    page = int(call.data.split('#')[1])
+    await bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id)
+    await start_adding_asset(
+        call.message,
+        page)
+
+
+@dp.callback_query_handler(
+    lambda c: 'name_liability' in c.data.split('#')[0])
+async def name_liability_pages(call):
+    page = int(call.data.split('#')[1])
+    await bot.delete_message(
+        call.message.chat.id,
+        call.message.message_id)
+    await start_adding_liability(
         call.message,
         page)
 
@@ -141,6 +167,84 @@ async def start_adding_expense(message: types.Message, page=1):
         reply_markup=paginator.markup)
 
 
+async def start_adding_asset(message: types.Message, page=1):
+    session = Session()
+    names = [(name.id, name.name) for name in session.query(NameAsset).all()]
+
+    if len(names) % 10 == 0:
+        pages = len(names)//10
+    else:
+        pages = len(names)//10 + 1
+
+    paginator = InlineKeyboardPaginator(
+        pages,
+        current_page=page,
+        data_pattern='name_asset#{page}',
+    )
+
+    start_for = page * 10 - 10
+    stop_for = page * 10
+    if len(names) < stop_for:
+        stop_for = len(names)
+    for i in range(start_for, stop_for, 2):
+        if stop_for != (i + 1):
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]),
+                InlineKeyboardButton(
+                    names[i+1][1],
+                    callback_data=names[i+1][0]))
+        else:
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]))
+
+    await message.answer(
+        text=f'Какие активы приобрели?',
+        reply_markup=paginator.markup)
+
+
+async def start_adding_liability(message: types.Message, page=1):
+    session = Session()
+    names = [(name.id, name.name) for name in session.query(NameLiability).all()]
+
+    if len(names) % 10 == 0:
+        pages = len(names)//10
+    else:
+        pages = len(names)//10 + 1
+
+    paginator = InlineKeyboardPaginator(
+        pages,
+        current_page=page,
+        data_pattern='name_liability#{page}',
+    )
+
+    start_for = page * 10 - 10
+    stop_for = page * 10
+    if len(names) < stop_for:
+        stop_for = len(names)
+    for i in range(start_for, stop_for, 2):
+        if stop_for != (i + 1):
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]),
+                InlineKeyboardButton(
+                    names[i+1][1],
+                    callback_data=names[i+1][0]))
+        else:
+            paginator.add_before(
+                InlineKeyboardButton(
+                    names[i][1],
+                    callback_data=names[i][0]))
+
+    await message.answer(
+        text=f'...опять пассивы?\nИ какие же?...',
+        reply_markup=paginator.markup)
+
+
 #Message Handlers
 
 # Start with hello message
@@ -169,10 +273,10 @@ async def message_parser(message: types.Message):
         await start_adding_income(message, 1)
     elif message.text == 'Добавить Расходы':
         await start_adding_expense(message)
-#    elif message.text == 'Добавить Активы':
-#        await start_adding_asset(message):
-#    elif message.text == 'Добавить Пассивы':
-#        await start_adding_liabilities(message)
+    elif message.text == 'Добавить Активы':
+        await start_adding_asset(message)
+    elif message.text == 'Добавить Пассивы':
+        await start_adding_liability(message)
     else:
         await message.reply('Не понял')
 
