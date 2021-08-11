@@ -50,7 +50,7 @@ CURRENCY_CHOICES = (
 )
 
 
-class Form(StateForm):
+class Form(StatesGroup):
     amount = State()
 
 
@@ -134,7 +134,7 @@ async def set_amount_of_income(call, name_id):
     await bot.send_message(reply)
     await Form.amount.set()
 
-@dp.message_handler(state=Form.url)
+@dp.message_handler(state=Form.amount)
 async def process_amount(message: types.Message, state: FSMContext):
     async with state.proxy() as amount:
         amount['amount'] = message.text
