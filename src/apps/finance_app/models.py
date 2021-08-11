@@ -2,7 +2,7 @@ from django.db import models
 
 
 CURRENCY_CHOICES = (
-    ('RUR', 'RUR'),
+    ('RUB', 'RUB'),
     ('USD', 'USD'),
     ('EUR', 'EUR'),
     ('CZK', 'CZK'),
@@ -28,7 +28,7 @@ class Income(models.Model):
     amount = models.FloatField()
     currency = models.CharField(max_length=255,
                                 choices=CURRENCY_CHOICES,
-                                default='RUR')
+                                default='RUB')
     date_income = models.DateTimeField(auto_now_add=True,
                                        editable=False,
                                        blank=True)
